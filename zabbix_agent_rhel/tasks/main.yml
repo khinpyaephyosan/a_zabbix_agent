@@ -1,0 +1,58 @@
+---
+# tasks file for zabbix_agent
+
+   - name: copy rpm file
+     copy:
+       src: files/rpm/zabbix-agent-4.0.7-1.el7.x86_64.rpm
+       dest: /opt
+     tags: package
+     when: version == '4.0.7'
+   
+   - name: install zabbix agent rpm
+     yum:
+       name: /opt/zabbix-agent-4.0.7-1.el7.x86_64.rpm
+       state: present
+     when: version  == '4.0.7'
+     tags: package
+
+   - name: copy config file
+     template:
+       src: templates/zabbix_agentd.conf.j2 
+       dest: /etc/zabbix/zabbix_agentd.conf
+     tags: config
+
+   - name: check zabbix agent config directory
+     stat:
+       path: /etc/zabbix/zabbix_agentd.d/
+     register: dir_check
+     tags: config
+   
+   - name: create zabbix agent cofig directory if doesn't exit
+     file: 
+       path: /etc/zabbix/zabbix_agentd.d/
+       state: directory 
+     when: 'dir_check.stat.exists == False'
+     tags: config
+   
+   - name: copy script 
+     copy:
+       src: files/script/memory_zabbix_master_item.sh
+       dest: '{{ script_dir }}'
+     tags: config
+
+   - name: copy additional configs
+     copy:
+       src: '{{ item }}'
+       dest: /etc/zabbix/zabbix_agentd.d/ 
+     with_items:
+       - files/zabbix_agent_config/userparameter_linux-plus.conf
+     when: 'dir_check.stat.exists == True'
+     notify: restart zabbix-agent
+     tags: config
+
+   - name: check service status
+     service: 
+       name: zabbix-agent
+       state: started
+       enabled: yes
+     tags: service
