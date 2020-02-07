@@ -1,1 +1,1 @@
-# zabbix_agent_cent7
+# zabbix_agent
